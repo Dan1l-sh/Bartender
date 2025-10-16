@@ -35,23 +35,38 @@ function MicroMenuMod:OnEnable()
 	if not self.bar then
 		self.bar = setmetatable(Bartender4.ButtonBar:Create("MicroMenu", self.db.profile, L["Micro Menu"]), {__index = MicroMenuBar})
 		local buttons = {}
-		table_insert(buttons, CharacterMicroButton)
-		table_insert(buttons, SpellbookMicroButton)
-		table_insert(buttons, TalentMicroButton)
-		table_insert(buttons, AchievementMicroButton)
-		table_insert(buttons, QuestLogMicroButton)
-		table_insert(buttons, SocialsMicroButton)
-		table_insert(buttons, PVPMicroButton)
-		table_insert(buttons, LFDMicroButton)
-		table_insert(buttons, EncounterJournalMicroButton)
-		table_insert(buttons, HelpMicroButton)
-		table_insert(buttons, StoreMicroButton)
-		table_insert(buttons, MainMenuMicroButton)
+		local order = {
+		"CharacterMicroButton",
+		"SpellbookMicroButton",
+		"TalentMicroButton",
+		"AchievementMicroButton",
+		"QuestLogMicroButton",
+		"SocialsMicroButton",
+		"PVPMicroButton",
+		"LFDMicroButton",
+		"EncounterJournalMicroButton",
+		"StoreMicroButton",
+		"MainMenuMicroButton"
+		}
+		for _, name in ipairs(order) do
+		local b = _G[name]
+		if b then table_insert(buttons, b) end
+		end
 		self.bar.buttons = buttons
 
 		MicroMenuMod.button_count = #buttons
 
 		self:SecureHook("UpdateMicroButtons")
+
+		if MoveMicroButtons then
+			self:SecureHook("MoveMicroButtons", "RestoreButtons")
+		end
+		if VehicleMenuBar_MoveMicroButtons then
+			self:SecureHook("VehicleMenuBar_MoveMicroButtons", "RestoreButtons")
+		end
+		if UIParent_ManageFramePositions then
+			self:SecureHook("UIParent_ManageFramePositions", "RestoreButtons")
+		end
 
 		for i,v in pairs(buttons) do
 			v:SetParent(self.bar)
@@ -63,6 +78,12 @@ function MicroMenuMod:OnEnable()
 	self.bar:Enable()
 	self:ToggleOptions()
 	self:ApplyConfig()
+
+	self:RestoreButtons()
+	if C_Timer and C_Timer.After then
+		C_Timer.After(0,   function() MicroMenuMod:RestoreButtons() end)
+		C_Timer.After(0.5, function() MicroMenuMod:RestoreButtons() end)
+	end
 end
 
 function MicroMenuMod:ApplyConfig()
