@@ -14,6 +14,8 @@ local MicroMenuBar = setmetatable({}, {__index = ButtonBar})
 
 local table_insert = table.insert
 
+local CreateFrame = CreateFrame
+
 local defaults = { profile = Bartender4:Merge({
 	enabled = true,
 	vertical = false,
@@ -28,6 +30,10 @@ local defaults = { profile = Bartender4:Merge({
 
 function MicroMenuMod:OnInitialize()
 	self.db = Bartender4.db:RegisterNamespace("MicroMenu", defaults)
+	self.db.profile.visibility = self.db.profile.visibility or {}
+	self.db.profile.visibility.vehicleui = false
+	self.db.profile.visibility.possess   = false
+
 	self:SetEnabledState(self.db.profile.enabled)
 end
 
@@ -36,27 +42,32 @@ function MicroMenuMod:OnEnable()
 		self.bar = setmetatable(Bartender4.ButtonBar:Create("MicroMenu", self.db.profile, L["Micro Menu"]), {__index = MicroMenuBar})
 		local buttons = {}
 		local order = {
-		"CharacterMicroButton",
-		"SpellbookMicroButton",
-		"TalentMicroButton",
-		"AchievementMicroButton",
-		"QuestLogMicroButton",
-		"SocialsMicroButton",
-		"PVPMicroButton",
-		"LFDMicroButton",
-		"EncounterJournalMicroButton",
-		"StoreMicroButton",
-		"MainMenuMicroButton"
+			"CharacterMicroButton",
+			"SpellbookMicroButton",
+			"TalentMicroButton",
+			"AchievementMicroButton",
+			"QuestLogMicroButton",
+			"SocialsMicroButton",
+			"PVPMicroButton",
+			"LFDMicroButton",
+			"EncounterJournalMicroButton",
+			"StoreMicroButton",
+			"MainMenuMicroButton"
 		}
-		for _, name in ipairs(order) do
-		local b = _G[name]
-		if b then table_insert(buttons, b) end
-		end
-		self.bar.buttons = buttons
 
+		for _, name in ipairs(order) do
+			local b = _G[name]
+			if b then table_insert(buttons, b) end
+		end
+
+		self.bar.buttons = buttons
 		MicroMenuMod.button_count = #buttons
 
 		self:SecureHook("UpdateMicroButtons")
+
+		if UpdateMicroButtonsParent then
+			self:SecureHook("UpdateMicroButtonsParent", "RestoreButtons")
+		end
 
 		if MoveMicroButtons then
 			self:SecureHook("MoveMicroButtons", "RestoreButtons")
@@ -68,13 +79,14 @@ function MicroMenuMod:OnEnable()
 			self:SecureHook("UIParent_ManageFramePositions", "RestoreButtons")
 		end
 
-		for i,v in pairs(buttons) do
+		for _, v in pairs(buttons) do
 			v:SetParent(self.bar)
 			v:Show()
 			v:SetFrameLevel(self.bar:GetFrameLevel() + 1)
 			v.ClearSetPoint = self.bar.ClearSetPoint
 		end
 	end
+
 	self.bar:Enable()
 	self:ToggleOptions()
 	self:ApplyConfig()
@@ -83,6 +95,24 @@ function MicroMenuMod:OnEnable()
 	if C_Timer and C_Timer.After then
 		C_Timer.After(0,   function() MicroMenuMod:RestoreButtons() end)
 		C_Timer.After(0.5, function() MicroMenuMod:RestoreButtons() end)
+	end
+
+	if not self._fixFrame and CreateFrame then
+		local f = CreateFrame("Frame")
+		f:SetScript("OnUpdate", function(_, elapsed)
+			MicroMenuMod:OnUpdateFrame(elapsed)
+		end)
+		self._fixFrame = f
+	end
+
+	if self._fixFrame then
+		self._fixFrame:Show()
+	end
+end
+
+function MicroMenuMod:OnDisable()
+	if self._fixFrame then
+		self._fixFrame:Hide()
 	end
 end
 
@@ -99,10 +129,20 @@ function MicroMenuMod:RestoreButtons()
 	self.bar:UpdateButtonLayout()
 end
 
+function MicroMenuMod:OnUpdateFrame(elapsed)
+	self._elapsed = (self._elapsed or 0) + elapsed
+	if self._elapsed < 0.1 then return end
+	self._elapsed = 0
+
+	if not self:IsEnabled() or not self.bar then return end
+
+	self:RestoreButtons()
+end
+
 function MicroMenuMod:UpdateMicroButtons()
-	if MainMenuBar.state == "player" then
+	--if MainMenuBar.state == "player" then
 		self:RestoreButtons()
-	end
+	--end
 end
 
 MicroMenuBar.button_width = 28
