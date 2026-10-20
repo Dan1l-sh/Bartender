@@ -155,6 +155,7 @@ local stanceClasses = {
 	WARLOCK = true,
 	PRIEST = true,
 	ROGUE = true,
+	DEMONHUNTER = true,
 }
 
 local function getStanceTable()
